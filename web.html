@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BudgetWise - AI Financial Forecasting</title>
+    <style>
+        :root {
+            --primary: #0f172a; 
+            --secondary: #3b82f6;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --bg: rgba(209, 213, 213, 0.605);
+            --card: #ffffff; 
+            --text: #334155;
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
+
+        .hidden { display: none !important; }
+        .btn { 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            color: white; 
+            transition: opacity 0.2s;
+            font-size: 0.95rem;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background: var(--secondary); }
+        .btn-success { background: var(--success); }
+        .btn-danger  { background: var(--danger); }
+
+        .w-full { width: 100%; }
+
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.9rem; margin-bottom: 5px; color: #64748b; }
+        .input-group input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; }
+        
+        #auth-container { flex: 1; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+        .auth-box { background: var(--card); padding: 40px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center; }
+        #auth-title { font-weight: 700; font-size: 1.5rem; margin-bottom: 20px; color: var(--text); }
+        #login-form label {font-weight: bold;color: var(--text);}
+        #signup-form label {font-weight: bold;color: var(--text);}
+
+        .navbar {background-color: #155cf7;color: white;padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);}
+        .brand {color: white;font-size: 1.5rem; font-weight: bold;}
+        #nav-user {color: white;margin-right: 15px;font-weight: 600;}
+        .navbar div { display: flex; align-items: center; gap: 10px; } 
+        .main-content { padding: 30px; display: grid; grid-template-columns: 300px 1fr; gap: 30px; max-width: 1200px; margin: 0 auto; width: 100%; }
+        .card { background: var(--card); padding: 20px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .stat-card { background: #eff6ff; padding: 20px; border-radius: 8px; text-align: center; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 10px; width: 400px; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-container">
+        <div id="auth-box" class="auth-box">
+            <h1 style="color:var(--primary)">BudgetWise</h1>
+            <p id="auth-title">Sign In</p>
+            
+            <form id="login-form">
+                <div class="input-group"><label>Email</label><input type="email" id="l-email" required></div>
+                <div class="input-group"><label>Password</label><input type="password" id="l-pass" required></div>
+                <button type="submit" class="btn btn-primary w-full">Login</button>
+            </form>
+
+            <form id="signup-form" class="hidden">
+                <div class="input-group"><label>Name</label><input type="text" id="s-name" required></div>
+                <div class="input-group"><label>Phone</label><input type="tel" id="s-phone" required></div>
+                <div class="input-group"><label>Email</label><input type="email" id="s-email" required></div>
+                <div class="input-group"><label>Password (8+ chars, 1 Upper, 1 Sym/Num)</label><input type="password" id="s-pass" required></div>
+                <div class="input-group"><label>Confirm Password</label><input type="password" id="s-conf" required></div>
+                <button type="submit" class="btn btn-primary w-full">Sign Up</button>
+            </form>
+
+            <p style="margin-top:15px; font-size:0.9rem; cursor:pointer; color:var(--secondary)" onclick="toggleAuth()">
+                <span id="auth-toggle-text">New user? Create account</span>
+            </p>
+        </div>
+    </div>
+
+    <div id="dashboard-container" class="hidden">
+        <nav class="navbar">
+            <h2 style="color:var(--primary); margin:0;">Budget<span>Wise</span></h2>
+            <div>
+                <span id="nav-user" style="font-weight:bold; margin-right:5px;">User</span>
+                <button onclick="document.getElementById('edit-modal').classList.remove('hidden')" class="btn btn-success">Profile</button>
+                <button onclick="DB.logout()" class="btn btn-danger">Sign Out</button>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <div>
+                <div class="card">
+                    <h3>Add Expense</h3>
+                    <input type="date" id="ex-date" style="width:100%; padding:8px; margin:10px 0; border:1px solid #ccc; border-radius:4px;">
+                    <input type="number" id="ex-amount" placeholder="Amount (₹)" style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+                    <input type="text" id="ex-note" placeholder="Reason" style="width:100%; padding:8px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px;">
+                    <button onclick="addExpense()" class="btn btn-primary w-full">Add</button>
+                </div>
+                <div class="card">
+                    <h3>Set Budget</h3>
+                    <input type="number" id="new-budget" placeholder="Monthly Limit" style="width:100%; padding:8px; margin:10px 0; border:1px solid #ccc; border-radius:4px;">
+                    <button onclick="setBudget()" class="btn btn-primary w-full">Update</button>
+                </div>
+            </div>
+
+            <div>
+                <div class="stats-grid">
+                    <div class="stat-card"><h3>Total Spent</h3><h2 id="disp-total">₹0</h2></div>
+                    <div class="stat-card"><h3>Budget</h3><h2 id="disp-budget">₹0</h2></div>
+                    <div class="stat-card" style="border:1px solid #8b5cf6"><h3>AI Forecast</h3><h2 id="disp-forecast">₹0</h2></div>
+                </div>
+
+                <div id="warning-msg" class="hidden" style="background:#fee2e2; color:#b91c1c; padding:15px; border-radius:8px; margin-top:20px; border:1px solid #fca5a5;">
+                    ⚠️ <strong>Alert:</strong> You have exceeded your monthly budget!
+                </div>
+
+                <div class="card" style="margin-top:20px;">
+                    <h3>Recent Transactions</h3>
+                    <table>
+                        <thead><tr><th>Date</th><th>Note</th><th>Amount</th></tr></thead>
+                        <tbody id="exp-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Edit Profile</h2>
+            <div class="input-group"><label>Name</label><input type="text" id="e-name"></div>
+            <div class="input-group"><label>Email</label><input type="email" id="e-email"></div>
+            <div class="input-group"><label>New Password (leave blank to keep)</label><input type="password" id="e-pass"></div>
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+                <button onclick="document.getElementById('edit-modal').classList.add('hidden')" class="btn" style="background:#94a3b8;">Cancel</button>
+                <button onclick="updateProfile()" class="btn btn-primary">Update</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ==========================================
+    //  API LAYER (Connecting to Node.js/MySQL)
+    // ==========================================
+    const API_URL = "http://localhost:3000";
+
+    const DB = {
+        getSession: () => {
+            const userStr = localStorage.getItem('bw_session');
+            return userStr ? JSON.parse(userStr) : null;
+        },
+        setSession: (user) => localStorage.setItem('bw_session', JSON.stringify(user)),
+        logout: () => { localStorage.removeItem('bw_session'); location.reload(); },
+
+        refreshUserData: async () => {
+            const currentSession = DB.getSession();
+            if (!currentSession) return null;
+            
+            try {
+                const response = await fetch(`${API_URL}/get-data/${currentSession.id}`);
+                if (!response.ok) throw new Error("Server Error");
+                const freshUser = await response.json();
+                DB.setSession(freshUser); 
+                return freshUser;
+            } catch (err) { console.error("Connection Error", err); return null; }
+        }
+    };
+
+    // ==========================================
+    //  APP LOGIC
+    // ==========================================
+    let isLoginView = true;
+    function toggleAuth() {
+        isLoginView = !isLoginView;
+        document.getElementById('login-form').classList.toggle('hidden', !isLoginView);
+        document.getElementById('signup-form').classList.toggle('hidden', isLoginView);
+        document.getElementById('auth-title').innerText = isLoginView ? "Sign In" : "Create Account";
+        document.getElementById('auth-toggle-text').innerText = isLoginView ? "New user? Create account" : "Have account? Login";
+    }
+
+    function validatePassword(pass, name) {
+        if (pass.length < 8) return "Password must be at least 8 characters.";
+        if (!/[A-Z]/.test(pass)) return "Password must have at least 1 Uppercase letter.";
+        if (!/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pass)) return "Password must have 1 Number or Symbol.";
+        if (name && pass === name) return "Password cannot be the same as your Name.";
+        return null;
+    }
+
+    // --- SIGN UP ---
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('s-name').value;
+        const email = document.getElementById('s-email').value;
+        const pass = document.getElementById('s-pass').value;
+        const conf = document.getElementById('s-conf').value;
+        const phone = document.getElementById('s-phone').value;
+
+        if (pass !== conf) return alert("Passwords do not match");
+        const passError = validatePassword(pass, name);
+        if (passError) return alert(passError);
+
+        try {
+            const res = await fetch(`${API_URL}/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, pass, phone })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                alert("Account Created! Please Login.");
+                toggleAuth();
+            } else {
+                alert(data.message);
+            }
+        } catch (err) { alert("Server connection failed"); }
+    });
+
+    // --- LOGIN ---
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('l-email').value;
+        const pass = document.getElementById('l-pass').value;
+
+        try {
+            const res = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, pass })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                DB.setSession(data.user);
+                await DB.refreshUserData(); 
+                loadDashboard();
+            } else {
+                alert("Invalid Credentials");
+            }
+        } catch (err) { alert("Server connection failed"); }
+    });
+
+    // --- DASHBOARD ---
+    async function loadDashboard() {
+        const user = await DB.refreshUserData();
+        if (!user) return document.getElementById('auth-container').classList.remove('hidden');
+
+        document.getElementById('auth-container').classList.add('hidden');
+        document.getElementById('dashboard-container').classList.remove('hidden');
+
+        document.getElementById('nav-user').innerText = user.name;
+        document.getElementById('e-name').value = user.name;
+        document.getElementById('e-email').value = user.email;
+
+        const expenses = user.expenses || []; 
+        let total = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+        
+        document.getElementById('disp-total').innerText = "₹" + total;
+        document.getElementById('disp-budget').innerText = "₹" + user.budget;
+
+        let days = new Date().getDate();
+        let forecast = days > 0 ? Math.floor((total / days) * 30) : 0;
+        document.getElementById('disp-forecast').innerText = "₹" + forecast;
+
+        let warn = document.getElementById('warning-msg');
+        warn.classList.toggle('hidden', !(user.budget > 0 && total > user.budget));
+
+        let list = document.getElementById('exp-list');
+        list.innerHTML = "";
+        expenses.slice().reverse().forEach(e => {
+            let dateStr = new Date(e.date).toLocaleDateString();
+            list.innerHTML += `<tr><td>${dateStr}</td><td>${e.note}</td><td>₹${e.amount}</td></tr>`;
+        });
+    }
+
+    async function addExpense() {
+        const user = DB.getSession();
+        const date = document.getElementById('ex-date').value;
+        const amt = document.getElementById('ex-amount').value;
+        const note = document.getElementById('ex-note').value;
+
+        if(!date || !amt || !note) return alert("Fill all fields");
+
+        const res = await fetch(`${API_URL}/add-expense`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, date, amount: amt, note })
+        });
+
+        if (res.ok) {
+            document.getElementById('ex-amount').value = "";
+            document.getElementById('ex-note').value = "";
+            loadDashboard();
+        }
+    }
+
+    async function setBudget() {
+        const user = DB.getSession();
+        const budget = document.getElementById('new-budget').value;
+        
+        await fetch(`${API_URL}/update-budget`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: user.id, budget })
+        });
+        
+        alert("Budget Updated");
+        loadDashboard();
+    }
+
+    async function updateProfile() {
+        const user = DB.getSession();
+        const name = document.getElementById('e-name').value;
+        const email = document.getElementById('e-email').value;
+        const pass = document.getElementById('e-pass').value;
+
+        if (pass) {
+            const passError = validatePassword(pass, name);
+            if (passError) return alert(passError);
+        }
+
+        await fetch(`${API_URL}/update-profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: user.id, name, email, pass })
+        });
+
+        document.getElementById('edit-modal').classList.add('hidden');
+        alert("Profile Updated!");
+        loadDashboard();
+    }
+
+    if (localStorage.getItem('bw_session')) loadDashboard();
+
+    </script>
+</body>
+</html>
